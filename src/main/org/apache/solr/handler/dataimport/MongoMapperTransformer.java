@@ -15,19 +15,24 @@ public class MongoMapperTransformer extends Transformer {
     public Object transformRow(Map<String, Object> row, Context context) {
 
         for (Map<String, String> map : context.getAllEntityFields()) {
-            String mongoFieldName = map.get(MONGO_FIELD);
-            if (mongoFieldName == null)
+            String columnFieldName = map.get(DataImporter.COLUMN);
+            if (columnFieldName == null)
                 continue;
 
-            String columnFieldName = map.get(DataImporter.COLUMN);
-
-            row.put(columnFieldName, row.get(mongoFieldName));
-
+            String toString = map.get(TO_STRING);
+            //If the field is ObjectId convert it into String
+            if (toString != null && Boolean.parseBoolean(toString)) {
+                Object srcId = row.get(columnFieldName);
+                row.put(columnFieldName, srcId.toString());
+            }
+            else{
+                row.put(columnFieldName, row.get(columnFieldName));
+            }
         }
-
 
         return row;
     }
 
-    public static final String MONGO_FIELD = "mongoField";
+    //To identify the _id field
+    public static final String TO_STRING = "toString";
 }
