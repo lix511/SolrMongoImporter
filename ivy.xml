@@ -5,7 +5,7 @@
         <conf name="compile" transitive="true" visibility="public"/>
     </configurations>
     <dependencies>
-        <dependency org="org.mongodb" name="mongo-java-driver" rev="2.11.1"
+        <dependency org="org.mongodb" name="mongo-java-driver" rev="3.10.2"
                     conf="compile->default"/>
         <dependency org="junit" name="junit" rev="4.3"
                     conf="compile->default"/>

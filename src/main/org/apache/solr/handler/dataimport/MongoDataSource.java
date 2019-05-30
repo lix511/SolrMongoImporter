@@ -3,15 +3,10 @@ package org.apache.solr.handler.dataimport;
 
 import com.mongodb.*;
 import com.mongodb.util.JSON;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.bson.types.ObjectId;
-
-import java.net.UnknownHostException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 
 import static org.apache.solr.handler.dataimport.DataImportHandlerException.SEVERE;
@@ -31,7 +26,7 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
 
     private DBCollection mongoCollection;
     private DB mongoDb;
-    private Mongo mongoConnection;
+    private MongoClient mongoClient;
 
     private DBCursor mongoCursor;
 
@@ -49,20 +44,22 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
         }
 
         try {
-            Mongo mongo = new Mongo(host, Integer.parseInt(port));
-            mongo.setReadPreference(ReadPreference.secondaryPreferred());
+            MongoClientOptions options = MongoClientOptions.builder()
+                    .readPreference(ReadPreference.secondaryPreferred())
+                    .build();
 
-            this.mongoConnection = mongo;
-            this.mongoDb = mongo.getDB(databaseName);
+            ServerAddress serverAddress = new ServerAddress(host, Integer.parseInt(port));
 
-            if (username != null) {
-                if (this.mongoDb.authenticate(username, password.toCharArray()) == false) {
-                    throw new DataImportHandlerException(SEVERE
-                            , "Mongo Authentication Failed");
-                }
+            if (username == null) {
+                this.mongoClient = new MongoClient(serverAddress, options);
+            } else {
+                MongoCredential credential = MongoCredential.createScramSha256Credential(username, databaseName, password.toCharArray());
+                this.mongoClient = new MongoClient(serverAddress, credential, options);
             }
 
-        } catch (UnknownHostException e) {
+            this.mongoDb = mongoClient.getDB(databaseName);
+
+        } catch (Exception e) {
             throw new DataImportHandlerException(SEVERE
                     , "Unable to connect to Mongo");
         }
@@ -77,13 +74,12 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
          * it has to be converted back to type ObjectId() using the
          * constructor
          */
-        if(query.contains("_id")){
+        if (query.contains("_id")) {
             @SuppressWarnings("unchecked")
             Map<String, String> queryWithId = (Map<String, String>) JSON.parse(query);
             String id = queryWithId.get("_id");
             queryObject = new BasicDBObject("_id", new ObjectId(id));
-        }
-        else{
+        } else {
             queryObject = (DBObject) JSON.parse(query);
         }
 
@@ -189,8 +185,8 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
             this.mongoCursor.close();
         }
 
-        if (this.mongoConnection != null) {
-            this.mongoConnection.close();
+        if (this.mongoClient != null) {
+            this.mongoClient.close();
         }
     }
 
