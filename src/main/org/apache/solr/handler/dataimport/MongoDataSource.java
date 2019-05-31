@@ -67,7 +67,7 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
 
     @Override
     public Iterator<Map<String, Object>> getData(String query) {
-
+        LOG.warn("mongo query: " + query);
         DBObject queryObject = new BasicDBObject();
 
         /* If querying by _id, since the id is a string now,
@@ -80,7 +80,7 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
             String id = queryWithId.get("_id");
             queryObject = new BasicDBObject("_id", new ObjectId(id));
         } else {
-            queryObject = (DBObject) JSON.parse(query);
+            queryObject = BasicDBObject.parse(query);
         }
 
         LOG.debug("Executing MongoQuery: " + query.toString());
