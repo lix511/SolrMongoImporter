@@ -67,9 +67,19 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
 
     @Override
     public Iterator<Map<String, Object>> getData(String query) {
-        LOG.warn("mongo query: " + query);
-        DBObject queryObject = new BasicDBObject();
+        LOG.info("mongo query: " + query);
 
+        BasicDBObject projection = null;
+        if (query.startsWith("[")) {
+            int endIndex = query.indexOf("]");
+            String projectionQuery = query.substring(1, endIndex);
+            LOG.info("mongo projection: " + projectionQuery);
+            projection = BasicDBObject.parse(projectionQuery);
+
+            query = query.substring(endIndex + 1);
+        }
+
+        DBObject queryObject;
         /* If querying by _id, since the id is a string now,
          * it has to be converted back to type ObjectId() using the
          * constructor
@@ -82,11 +92,10 @@ public class MongoDataSource extends DataSource<Iterator<Map<String, Object>>> {
         } else {
             queryObject = BasicDBObject.parse(query);
         }
-
-        LOG.debug("Executing MongoQuery: " + query.toString());
+        LOG.info("Executing MongoQuery: " + query);
 
         long start = System.currentTimeMillis();
-        mongoCursor = this.mongoCollection.find(queryObject);
+        mongoCursor = this.mongoCollection.find(queryObject, projection);
         LOG.trace("Time taken for mongo :"
                 + (System.currentTimeMillis() - start));
 
